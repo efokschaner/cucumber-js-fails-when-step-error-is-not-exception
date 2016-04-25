@@ -36,8 +36,12 @@ There are two issues with cucumber-js demonstrated here.
     rejecting Promises with non-Errors.
 
 2.  When cucumber-js fails, it does not call the callback passed to Cli.run, leaving the caller unaware of failure.
-    With the blocking or callback steps this cause an unhandled exception.
-    But with the Promise steps, this causes an unhandled rejection, which is not fatal and can leave the program hanging.
+    With blocking or callback steps this causes an unhandled exception.
+    With Promise steps, this causes an unhandled rejection, which is not fatal and can leave the program hanging.
+    As an example of real impact, this affects the following project:
+    https://github.com/midniteio/multi-cuke/blob/v0.6.5/src/lib/worker.js where it performs multiple cucumber.Cli
+    runs in forked node processes to parallelise testing. When the unhandled rejection occurs the worker does not know
+    that cucumber has stopped executing.
 
 ## Proposed Solution
 
@@ -46,7 +50,9 @@ at https://github.com/cucumber/cucumber-js/blob/v0.10.2/lib/cucumber/support_cod
 this allows the type returned by `stepResult.getFailureException()` to always be an exception or string.
 If this solution seems reasonable I'll open a PR.
 
-To solve #2 is a bit trickier. I don't have a good suggestion for generally solving it yet. I would appreciate thoughts.
+To solve #2 is a bit trickier. We could defend against this specific instance of the problem by adding an extra try-catch
+here or there, but I don't think we can guarantee that this won't happen without actually making cucumber-js primarily
+Promise-based, and then trusing the Promise implementation to propagate rejection back to the caller.
 
 
 
